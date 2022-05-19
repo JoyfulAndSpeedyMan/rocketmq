@@ -148,6 +148,7 @@ public class NamesrvStartup {
             System.exit(-3);
         }
 
+        // 添加关闭server的钩子
         Runtime.getRuntime().addShutdownHook(new ShutdownHookThread(log, new Callable<Void>() {
             @Override
             public Void call() throws Exception {
@@ -156,6 +157,7 @@ public class NamesrvStartup {
             }
         }));
 
+        // 启动
         controller.start();
 
         return controller;

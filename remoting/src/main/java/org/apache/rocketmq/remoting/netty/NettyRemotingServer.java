@@ -194,6 +194,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                 }
             });
 
+        // 创建netty handler
         prepareSharableHandlers();
 
         ServerBootstrap childHandler =
@@ -208,7 +209,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
                         ch.pipeline()
+                             // 处理tls握手handler
                             .addLast(defaultEventExecutorGroup, HANDSHAKE_HANDLER_NAME, handshakeHandler)
+                            // 编码解码器、超时断开链接、服务处理
                             .addLast(defaultEventExecutorGroup,
                                 encoder,
                                 new NettyDecoder(),
@@ -238,6 +241,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         }
 
         try {
+            // 绑定端口，并等待它完成
             ChannelFuture sync = this.serverBootstrap.bind().sync();
             InetSocketAddress addr = (InetSocketAddress) sync.channel().localAddress();
             this.port = addr.getPort();
@@ -246,9 +250,11 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         }
 
         if (this.channelEventListener != null) {
+            // 一个线程事件循环，从BlockingQueue取出，根据事件类型去回调相应的channelEventListener方法
             this.nettyEventExecutor.start();
         }
 
+        // 定期扫描过期的请求
         this.timer.scheduleAtFixedRate(new TimerTask() {
 
             @Override
