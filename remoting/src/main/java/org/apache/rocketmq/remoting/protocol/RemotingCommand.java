@@ -211,10 +211,12 @@ public class RemotingCommand {
     public static byte[] markProtocolType(int source, SerializeType type) {
         byte[] result = new byte[4];
 
+        // 第一个比特标记序列化类型，JSON: 0,ROCKETMQ: 1，默认为JSON
         result[0] = type.getCode();
-        result[1] = (byte) ((source >> 16) & 0xFF);
-        result[2] = (byte) ((source >> 8) & 0xFF);
-        result[3] = (byte) (source & 0xFF);
+        // source是32位int，忽略高位（25-32位）只取低24位
+        result[1] = (byte) ((source >> 16) & 0xFF); // 17-24
+        result[2] = (byte) ((source >> 8) & 0xFF);  // 9-16
+        result[3] = (byte) (source & 0xFF); // 1-8
         return result;
     }
 
@@ -364,10 +366,14 @@ public class RemotingCommand {
         if (SerializeType.ROCKETMQ == serializeTypeCurrentRPC) {
             return RocketMQSerializable.rocketMQProtocolEncode(this);
         } else {
+            // 直接JSON.toJSONString
             return RemotingSerializable.encode(this);
         }
     }
 
+    /**
+     * 将customHeader的字段赋值到extFields中
+     */
     public void makeCustomHeaderToNet() {
         if (this.customHeader != null) {
             Field[] fields = getClazzFields(customHeader.getClass());
@@ -413,12 +419,13 @@ public class RemotingCommand {
         // 3> body data length
         length += bodyLength;
 
+        // 有两个4，分别是总长度和header长度，减去bodyLength是因为这里是encodeHeader，不包含body
         ByteBuffer result = ByteBuffer.allocate(4 + length - bodyLength);
 
-        // length
+        // length 总长度，4个字节
         result.putInt(length);
 
-        // header length
+        // header length，4个字节，其中1个字节的表示序列化类型，3个字节表示header length长度
         result.put(markProtocolType(headerData.length, serializeTypeCurrentRPC));
 
         // header data

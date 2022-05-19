@@ -30,6 +30,7 @@ public class RocketMQSerializable {
         // String remark
         byte[] remarkBytes = null;
         int remarkLen = 0;
+        // remark
         if (cmd.getRemark() != null && cmd.getRemark().length() > 0) {
             remarkBytes = cmd.getRemark().getBytes(CHARSET_UTF8);
             remarkLen = remarkBytes.length;
@@ -38,13 +39,16 @@ public class RocketMQSerializable {
         // HashMap<String, String> extFields
         byte[] extFieldsBytes = null;
         int extLen = 0;
+        // 扩展字段
         if (cmd.getExtFields() != null && !cmd.getExtFields().isEmpty()) {
             extFieldsBytes = mapSerialize(cmd.getExtFields());
             extLen = extFieldsBytes.length;
         }
 
+        // 只有remark和extFields的大小是变化的，其他字段都是固定的，所以一旦确定了这两个字段的大小，那么整个命令的长度就确定了
         int totalLen = calTotalLen(remarkLen, extLen);
 
+        // 分配好空间，接下来直接通过消息的序列化结构填数据就完事了
         ByteBuffer headerBuffer = ByteBuffer.allocate(totalLen);
         // int code(~32767)
         headerBuffer.putShort((short) cmd.getCode());
@@ -74,6 +78,14 @@ public class RocketMQSerializable {
         return headerBuffer.array();
     }
 
+    /**
+     * 序列化map，结构如下：<br>
+     * totalLength: <br>
+     * key1Size:key1:val1Size:val1 <br>
+     * key2Size:key2:val2Size:val2 <br>
+     * @param map
+     * @return
+     */
     public static byte[] mapSerialize(HashMap<String, String> map) {
         // keySize+key+valSize+val
         if (null == map || map.isEmpty())
