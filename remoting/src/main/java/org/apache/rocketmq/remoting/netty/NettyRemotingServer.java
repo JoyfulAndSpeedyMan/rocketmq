@@ -211,7 +211,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                         ch.pipeline()
                              // 处理tls握手handler
                             .addLast(defaultEventExecutorGroup, HANDSHAKE_HANDLER_NAME, handshakeHandler)
-                            // 编码解码器、超时断开链接、服务处理
+                            // 解码器、超时断开链接、服务处理
                             .addLast(defaultEventExecutorGroup,
                                 encoder,
                                 new NettyDecoder(),
@@ -440,6 +440,13 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         }
     }
 
+    /**
+     * netty状态触发，交给channelEventListener处理
+     * CONNECT: netty channelActive()
+     * CLOSE: netty channelInactive()
+     * IDLE: IdleStateHandler事件触发
+     * EXCEPTION： netty exceptionCaught()
+     */
     @ChannelHandler.Sharable
     class NettyConnectManageHandler extends ChannelDuplexHandler {
         @Override

@@ -36,6 +36,8 @@ public class RemotingCommand {
     public static final String SERIALIZE_TYPE_ENV = "ROCKETMQ_SERIALIZE_TYPE";
     public static final String REMOTING_VERSION_KEY = "rocketmq.remoting.version";
     private static final InternalLogger log = InternalLoggerFactory.getLogger(RemotingHelper.ROCKETMQ_REMOTING);
+
+    // RPC标识在flag字段的的第二位
     private static final int RPC_TYPE = 0; // 0, REQUEST_COMMAND
     private static final int RPC_ONEWAY = 1; // 0, RPC
     private static final Map<Class<? extends CommandCustomHeader>, Field[]> CLASS_HASH_MAP =
@@ -220,6 +222,9 @@ public class RemotingCommand {
         return result;
     }
 
+    /**
+     * 标记响应类型（双向的，有答复的那种）
+     */
     public void markResponseType() {
         int bits = 1 << RPC_TYPE;
         this.flag |= bits;
@@ -436,11 +441,17 @@ public class RemotingCommand {
         return result;
     }
 
+    /**
+     * 标记这个command是单程调用（只有请求，没有答复的那种）
+     */
     public void markOnewayRPC() {
         int bits = 1 << RPC_ONEWAY;
         this.flag |= bits;
     }
 
+    /**
+     * 是否是单程RPC调用（只有请求，没有答复的那种）
+     */
     @JSONField(serialize = false)
     public boolean isOnewayRPC() {
         int bits = 1 << RPC_ONEWAY;

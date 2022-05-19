@@ -190,7 +190,9 @@ public abstract class NettyRemotingAbstract {
      * @param cmd request command.
      */
     public void processRequestCommand(final ChannelHandlerContext ctx, final RemotingCommand cmd) {
+        // 尝试获取命令处理器，提示：通过registerProcessor()方法注册
         final Pair<NettyRequestProcessor, ExecutorService> matched = this.processorTable.get(cmd.getCode());
+        // 没有就用默认的
         final Pair<NettyRequestProcessor, ExecutorService> pair = null == matched ? this.defaultRequestProcessor : matched;
         final int opaque = cmd.getOpaque();
 
@@ -205,11 +207,13 @@ public abstract class NettyRemotingAbstract {
                             @Override
                             public void callback(RemotingCommand response) {
                                 doAfterRpcHooks(remoteAddr, cmd, response);
+                                // 不是单程调用，写入响应命令
                                 if (!cmd.isOnewayRPC()) {
                                     if (response != null) {
                                         response.setOpaque(opaque);
                                         response.markResponseType();
                                         try {
+                                            // 写入响应
                                             ctx.writeAndFlush(response);
                                         } catch (Throwable e) {
                                             log.error("process request over, but response failed", e);
@@ -217,10 +221,12 @@ public abstract class NettyRemotingAbstract {
                                             log.error(response.toString());
                                         }
                                     } else {
+                                        // 空响应，不进行任何操作
                                     }
                                 }
                             }
                         };
+                        // 如果异步处理器，就用异步处理方法执行
                         if (pair.getObject1() instanceof AsyncNettyRequestProcessor) {
                             AsyncNettyRequestProcessor processor = (AsyncNettyRequestProcessor)pair.getObject1();
                             processor.asyncProcessRequest(ctx, cmd, callback);
