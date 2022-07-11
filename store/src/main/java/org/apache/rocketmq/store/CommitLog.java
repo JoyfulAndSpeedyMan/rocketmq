@@ -95,6 +95,7 @@ public class CommitLog {
 
         this.defaultMessageStore = defaultMessageStore;
 
+        // CommitLog刷盘方式，默认为异步，也就是FlushRealTimeService
         if (FlushDiskType.SYNC_FLUSH == defaultMessageStore.getMessageStoreConfig().getFlushDiskType()) {
             this.flushCommitLogService = new GroupCommitService();
         } else {
@@ -136,12 +137,13 @@ public class CommitLog {
     }
 
     public void start() {
+        // commitLog定时刷盘
         this.flushCommitLogService.start();
 
         flushDiskWatcher.setDaemon(true);
         flushDiskWatcher.start();
 
-
+        // 默认没打开，暂时不研究
         if (defaultMessageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
             this.commitLogService.start();
         }
