@@ -30,6 +30,13 @@ import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 
+/**
+ * <h2>CommitLog文件</h2>
+ * CommitLog是存储消息的主体。Producer发送的消息都会顺序写入commitLog文件，所以随着写<br>
+ * 入的消息增多，文件也会随之变大。单个文件大小默认1G, 文件名长度为20位，左边补零，剩余为起<br>
+ * 始偏移量，比如00000000000000000000代表了第一个文件，起始偏移量为0，文件大小为1G=1073741824；<br>
+ * 当第一个文件写满了，第二个文件为00000000001073741824，起始偏移量为1073741824，以此类推
+ */
 public class MappedFileQueue {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private static final InternalLogger LOG_ERROR = InternalLoggerFactory.getLogger(LoggerName.STORE_ERROR_LOGGER_NAME);
@@ -40,6 +47,9 @@ public class MappedFileQueue {
 
     protected final int mappedFileSize;
 
+    /**
+     * 存储了具体的CommitLog文件，根据文件名升序排列的
+     */
     protected final CopyOnWriteArrayList<MappedFile> mappedFiles = new CopyOnWriteArrayList<MappedFile>();
 
     private final AllocateMappedFileService allocateMappedFileService;
@@ -146,6 +156,10 @@ public class MappedFileQueue {
     }
 
 
+    /**
+     * 从storePath中加载CommitLog文件
+     * @return
+     */
     public boolean load() {
         File dir = new File(this.storePath);
         File[] ls = dir.listFiles();
@@ -155,8 +169,14 @@ public class MappedFileQueue {
         return true;
     }
 
+    /**
+     * 加载CommitLog的具体逻辑
+     * @param files
+     * @return
+     */
     public boolean doLoad(List<File> files) {
         // ascending order
+        // 根据文件名字升序排列
         files.sort(Comparator.comparing(File::getName));
 
         for (File file : files) {
@@ -167,6 +187,7 @@ public class MappedFileQueue {
             }
 
             try {
+                // 假如这里是第一个文件00000000000000000000，起始偏移量为0，文件大小为1G=1073741824
                 MappedFile mappedFile = new MappedFile(file.getPath(), mappedFileSize);
 
                 mappedFile.setWrotePosition(this.mappedFileSize);

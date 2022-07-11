@@ -70,6 +70,9 @@ import org.apache.rocketmq.store.index.QueryOffsetResult;
 import org.apache.rocketmq.store.schedule.ScheduleMessageService;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
+/**
+ * 默认的消息源实现
+ */
 public class DefaultMessageStore implements MessageStore {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
@@ -134,17 +137,24 @@ public class DefaultMessageStore implements MessageStore {
         this.messageStoreConfig = messageStoreConfig;
         this.brokerStatsManager = brokerStatsManager;
         this.allocateMappedFileService = new AllocateMappedFileService(this);
+        // commitLog
         if (messageStoreConfig.isEnableDLegerCommitLog()) {
             this.commitLog = new DLedgerCommitLog(this);
         } else {
             this.commitLog = new CommitLog(this);
         }
+        // topic-> consumeQueueMap
         this.consumeQueueTable = new ConcurrentHashMap<>(32);
 
+        // 消费队列定时刷盘
         this.flushConsumeQueueService = new FlushConsumeQueueService();
+        // 清理commitLog
         this.cleanCommitLogService = new CleanCommitLogService();
+        // 清理消费队列
         this.cleanConsumeQueueService = new CleanConsumeQueueService();
+        // 存储统计
         this.storeStatsService = new StoreStatsService();
+        // index服务
         this.indexService = new IndexService(this);
         if (!messageStoreConfig.isEnableDLegerCommitLog()) {
             this.haService = new HAService(this);
@@ -205,13 +215,14 @@ public class DefaultMessageStore implements MessageStore {
             if (result) {
                 this.storeCheckpoint =
                     new StoreCheckpoint(StorePathConfigHelper.getStoreCheckpoint(this.messageStoreConfig.getStorePathRootDir()));
-
+                // 加载storePath/index目录下的索引文件
                 this.indexService.load(lastExitOK);
 
                 this.recover(lastExitOK);
 
                 log.info("load over, and the max phy offset = {}", this.getMaxPhyOffset());
 
+                // 延时队列调度线程
                 if (null != scheduleMessageService) {
                     result =  this.scheduleMessageService.load();
                 }

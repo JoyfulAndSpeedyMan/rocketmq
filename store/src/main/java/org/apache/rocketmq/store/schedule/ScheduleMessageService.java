@@ -208,7 +208,9 @@ public class ScheduleMessageService extends ConfigManager {
     @Override
     public boolean load() {
         boolean result = super.load();
+        // 从messageDelayLevel属性中解析延迟等级，并放置到delayLevelTable中，单位ms
         result = result && this.parseDelayLevel();
+        // 纠正json文件配置和队列文件偏移不一致的情况，以队列文件为准
         result = result && this.correctDelayOffset();
         return result;
     }
@@ -226,12 +228,13 @@ public class ScheduleMessageService extends ConfigManager {
                 long correctDelayOffset = currentDelayOffset;
                 long cqMinOffset = cq.getMinOffsetInQueue();
                 long cqMaxOffset = cq.getMaxOffsetInQueue();
+                // 如果json文件配置中的minOffset小于队列文件的minOffset，以队列文件为准
                 if (currentDelayOffset < cqMinOffset) {
                     correctDelayOffset = cqMinOffset;
                     log.error("schedule CQ offset invalid. offset={}, cqMinOffset={}, cqMaxOffset={}, queueId={}",
                         currentDelayOffset, cqMinOffset, cqMaxOffset, cq.getQueueId());
                 }
-
+                // 如果json文件配置中的maxOffset小于队列文件的maxOffset，以队列文件为准
                 if (currentDelayOffset > cqMaxOffset) {
                     correctDelayOffset = cqMaxOffset;
                     log.error("schedule CQ offset invalid. offset={}, cqMinOffset={}, cqMaxOffset={}, queueId={}",

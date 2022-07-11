@@ -241,21 +241,27 @@ public class BrokerController {
     }
 
     public boolean initialize() throws CloneNotSupportedException {
+        // 从storePath/config/topics.json加载配置
         boolean result = this.topicConfigManager.load();
-
+        // 从storePath/config/consumerOffset.json加载配置
         result = result && this.consumerOffsetManager.load();
+        // 从storePath/config/subscriptionGroup.json加载配置
         result = result && this.subscriptionGroupManager.load();
+        // 从storePath/config/consumerFilter.json加载配置
         result = result && this.consumerFilterManager.load();
 
         if (result) {
             try {
+                // 创建消息存储相关对象
                 this.messageStore =
                     new DefaultMessageStore(this.messageStoreConfig, this.brokerStatsManager, this.messageArrivingListener,
                         this.brokerConfig);
+                // 默认不是打开的，暂时先不关注
                 if (messageStoreConfig.isEnableDLegerCommitLog()) {
                     DLedgerRoleChangeHandler roleChangeHandler = new DLedgerRoleChangeHandler(this, (DefaultMessageStore) messageStore);
                     ((DLedgerCommitLog)((DefaultMessageStore) messageStore).getCommitLog()).getdLedgerServer().getdLedgerLeaderElector().addRoleChangeHandler(roleChangeHandler);
                 }
+                // 统计
                 this.brokerStats = new BrokerStats((DefaultMessageStore) this.messageStore);
                 //load plugin
                 MessageStorePluginContext context = new MessageStorePluginContext(messageStoreConfig, brokerStatsManager, messageArrivingListener, brokerConfig);
@@ -267,6 +273,7 @@ public class BrokerController {
             }
         }
 
+        // 加载commitLog和ConsumeQueue以及
         result = result && this.messageStore.load();
 
         if (result) {
@@ -350,6 +357,8 @@ public class BrokerController {
 
             final long initialDelay = UtilAll.computeNextMorningTimeMillis() - System.currentTimeMillis();
             final long period = 1000 * 60 * 60 * 24;
+
+            // 定时记录状态
             this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
@@ -361,6 +370,7 @@ public class BrokerController {
                 }
             }, initialDelay, period, TimeUnit.MILLISECONDS);
 
+            // 定时写consumerOffset.json
             this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
@@ -372,6 +382,7 @@ public class BrokerController {
                 }
             }, 1000 * 10, this.brokerConfig.getFlushConsumerOffsetInterval(), TimeUnit.MILLISECONDS);
 
+            // 定时写consumerFilter.json
             this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
@@ -497,7 +508,9 @@ public class BrokerController {
                 }
             }
             initialTransaction();
+            // 注册访问权限校验rpc钩子
             initialAcl();
+            // 注册RPC钩子
             initialRpcHooks();
         }
         return result;

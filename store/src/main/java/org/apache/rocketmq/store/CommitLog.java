@@ -911,6 +911,9 @@ public class CommitLog {
         return -1;
     }
 
+    /**
+     * 获得最小的commitLog文件偏移
+     */
     public long getMinOffset() {
         MappedFile mappedFile = this.mappedFileQueue.getFirstMappedFile();
         if (mappedFile != null) {
